@@ -11,24 +11,25 @@ from state import serialize_game
 
 
 X_data, y_data = [], []
-values = {'0-1':-1, '1/2-1/2':0, '1-0':1}
-parsed_dataset = False
+values = {'0-1':-1, '1/2-1/2':0, '1-0':1, '*':0}
+parsed_datase= False
 
 
 def get_dataset(num_of_samples, debug = False):
-	for fn in os.listdir("dataset"):	
+	for fn in sorted(os.listdir("dataset")):	
+		print('Reading ' + fn)
 
 		lost, won = calculate_num_of_classes()
 		if lost >= num_of_samples and won >= num_of_samples:
 			break
 		parsed_dataset = False
-		pgn = open(os.path.join('dataset', fn))
+		pgn = open(os.path.join('dataset', fn), encoding = "ISO-8859-1")
 
 		while lost < num_of_samples and not parsed_dataset:
-			parse_pgn_file(pgn, -1)
+			parsed_dataset = parse_pgn_file(pgn, -1)
 			lost, won = calculate_num_of_classes()
 		while won < num_of_samples and not parsed_dataset:
-			parse_pgn_file(pgn, 1)
+			parsed_dataset = parse_pgn_file(pgn, 1)
 			lost, won = calculate_num_of_classes()
 
 		print(lost, won)
@@ -63,28 +64,35 @@ def get_data_from_game(game, board, result):
 def parse_pgn_file(pgn, result_to_collect, num_of_games = 1000, debug = False):
 	for game_num in range(0, num_of_games):
 		game = chess.pgn.read_game(pgn)
-		
-		if game == None:
-			parsed_dataset = True
+
+		if game is None:
+			return True
 			break
 
 		winning_site = 0
 
-
-		if(values[game.headers['Result']] == -1):
-			winning_site = -1
-		elif(values[game.headers['Result']] == 0):
-			winning_site = 0
-		elif(values[game.headers['Result']] == 1):
-			winning_site = 1
+		#print(game.headers['Result'])
+		try:
+			if(values[game.headers['Result']] == -1):
+				winning_site = -1
+			elif(values[game.headers['Result']] == 0):
+				winning_site = 0
+			elif(values[game.headers['Result']] == 1):
+				winning_site = 1
+		except:
+			print(game.headers['Result'])
+			print(game)
+			return True
 
 		if(winning_site == result_to_collect):
 			board = game.board()
 			get_data_from_game(game, board, winning_site)
-	
+
 	if debug:
 		lost, won = calculate_num_of_classes()
 		print("Lost: {}, Won: {}".format(lost, won))
+	
+	return False
 
 
 def calculate_num_of_classes():
